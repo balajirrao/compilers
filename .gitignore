@@ -1,5 +1,6 @@
-# Created by https://www.gitignore.io/api/emacs,linux,macos,haskell
-# Edit at https://www.gitignore.io/?templates=emacs,linux,macos,haskell
+
+# Created by https://www.gitignore.io/api/tags,emacs,linux,macos,haskell
+# Edit at https://www.gitignore.io/?templates=tags,emacs,linux,macos,haskell
 
 ### Emacs ###
 # -*- mode: gitignore; -*-
@@ -118,4 +119,23 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
-# End of https://www.gitignore.io/api/emacs,linux,macos,haskell
+### Tags ###
+# Ignore tags created by etags, ctags, gtags (GNU global) and cscope
+TAGS
+.TAGS
+!TAGS/
+tags
+.tags
+!tags/
+gtags.files
+GTAGS
+GRTAGS
+GPATH
+GSYMS
+cscope.files
+cscope.out
+cscope.in.out
+cscope.po.out
+
+
+# End of https://www.gitignore.io/api/tags,emacs,linux,macos,haskell

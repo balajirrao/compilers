@@ -1,35 +1,41 @@
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
+
 module AST where
 
-data N = NLowerVar String | NUpperVar String [String] deriving Show
+import qualified GHC.Generics as GHC
+import Generic.Data (gliftShowsPrec)
 
-data R = R0 N Add deriving Show
+import Data.Functor.Classes
+import Data.Functor.Foldable
 
-data LB = LBR R LB | LB0 R deriving Show
+data Pattern = PatternVar String | PatternCons String [String] deriving (Show)
 
-data C = Case Add LB deriving Show
+data Branch e = Branch Pattern e deriving (GHC.Generic1, Functor)
 
-data Base = BNumber Int | LowerVar String | UpperVar String | BaseAdd Add | Base0 C deriving Show
+instance Show1 Branch where
+  liftShowsPrec = gliftShowsPrec
 
-data App = AppR App Base | App0 Base deriving Show
+data AST e =
+    LowerVar String
+  | UpperVar String
+  | Case e [Branch e]
+  | BinOp Op e e
+  | Number Int
+  | App e e
+  deriving (GHC.Generic1, Functor)
 
-data Mul = MTimes Mul App | MDivide Mul App | Mul0 App deriving Show
+instance Show1 AST where
+  liftShowsPrec = gliftShowsPrec
 
-data Add = APlus Add Mul | AMinus Add Mul | Add0 Mul deriving Show
+type Op = String
 
-data Constructor = Cons String [String] deriving Show
+data Constructor = Constructor String [String] deriving (Show)
 
-data Definition = Defn String [String] Add | Data String [Constructor] deriving Show
+data Definition = Defn String [String] (Fix AST) | Data String [Constructor] deriving (Show)
 
--- data AST
---   = Program [Definition]
---   | Definition Definition
---   | Constructor Constructor
---   | Add Add
---   | Mul Mul
---   | App App
---   | Base Base
---   | C C
---   | LB LB
---   | R R
---   | N N
---   deriving Show
+
+-- instance Recursive (Fix AST) where

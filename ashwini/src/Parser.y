@@ -1,34 +1,36 @@
 {
 module Parser where
 
+import Data.Functor.Foldable (Fix(Fix))
+
 import AST
-import Lexer
+import qualified Lexer as L
 
 }
 
 %name parse
-%tokentype { Token }
+%tokentype { L.Token }
 %error { parseError }
 
 %token
-    '+'    { Plus }
-    '-'    { Minus }
-    '*'    { Times }
-    '/'    { Divide }
-    num    { Number $$ }
-    case   { Keyword CaseKw }
-    defn   { Keyword DefnKw }
-    of     { Keyword OfKw }
-    data   { Keyword DataKw }
-    '='    { Equal }
-    '->'   { PatternArrow }
-    '{'    { OpenCurly }
-    '}'    { ClosedCurly }
-    '('    { OpenParen }
-    ')'    { ClosedParen }
-    ','    { Comma }
-    lcaseid { LCaseId $$ }
-    ucaseid { UCaseId $$ }
+    '+'    { L.Plus }
+    '/'    { L.Divide }
+    '-'    { L.Minus }
+    '*'    { L.Times }
+    num    { L.Number $$ }
+    case   { L.Keyword L.CaseKw }
+    defn   { L.Keyword L.DefnKw }
+    of     { L.Keyword L.OfKw }
+    data   { L.Keyword L.DataKw }
+    '='    { L.Equal }
+    '->'   { L.PatternArrow }
+    '{'    { L.OpenCurly }
+    '}'    { L.ClosedCurly }
+    '('    { L.OpenParen }
+    ')'    { L.ClosedParen }
+    ','    { L.Comma }
+    lcaseid { L.LCaseId $$ }
+    ucaseid { L.UCaseId $$ }
 
 %%
 
@@ -50,44 +52,40 @@ UppercaseParams : {- empty -} { [] }
 Constructors : Constructors ',' Constructor { $3 : $1 }
             | Constructor { [ $1 ]}
 
-Constructor : ucaseid UppercaseParams { Cons $1 $2 }
+Constructor : ucaseid UppercaseParams { Constructor $1 $2 }
 
-Add : Add '+' Mul { APlus $1 $3 }
-    | Add '-'  Mul { AMinus $1 $3 }
-    | Mul { Add0 $1 }
+Add : Add '+' Mul { Fix $ BinOp "+" $1 $3 }
+    | Add '-'  Mul { Fix $ BinOp "-" $1 $3 }
+    | Mul { $1 }
 
 Mul
-    : Mul '*' App { MTimes $1 $3 }
-    | Mul '/' App { MDivide $1 $3 }
-    | App { Mul0 $1 }
+    : Mul '*' App { Fix $ BinOp "*" $1 $3 }
+    | Mul '/' App { Fix $ BinOp "/" $1 $3 }
+    | App { $1 }
 
 App
-    : App AppBase { AppR $1 $2 }
-    | AppBase { App0 $1 }
+    : App AppBase { Fix $ App $1 $2 }
+    | AppBase { $1 }
 
 AppBase
-    : num { BNumber $1 }
-    | lcaseid { LowerVar $1 }
-    | ucaseid { UpperVar $1 }
-    | '(' Add ')' { BaseAdd $2 }
-    | Case { Base0 $1 }
-
-Case
-    : case Add of '{' Branches '}'
-        { Case $2 $5 }
+    : num { Fix $ Number $1 }
+    | lcaseid { Fix $ LowerVar $1 }
+    | ucaseid { Fix $ UpperVar $1 }
+    | '(' Add ')' { $2 }
+    | case Add of '{' Branches '}' { Fix $ Case $2 $5 }
 
 Branches
-    : Branches Branch { LBR $2 $1 }
-    | Branch { LB0 $1 }
+    : Branch Branches { $1 : $2 }
+    | Branch { [ $1 ] }
 
 Branch
-    : Pattern '->' '{' Add '}' { R0 $1 $4  }
+    : Pattern '->' '{' Add '}' { Branch $1 $4  }
 
 Pattern
-    : lcaseid { NLowerVar $1 }
-    | ucaseid LowercaseParams { NUpperVar $1 $2 }
+    : lcaseid  { PatternVar $1 }
+    | ucaseid LowercaseParams { PatternCons $1 $2 }
 
 {
-parseError :: [Token] -> a
+parseError :: [L.Token] -> a
 parseError _ = error "Parse error"
 }

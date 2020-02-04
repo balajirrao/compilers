@@ -127,14 +127,14 @@ typecheckDefinitionPass1 (Defn name params _) = do
   return $ TypeEnv (M.singleton name fullType)
 typecheckDefinitionPass1 (Data name constructors) =
   return $
-    foldl goCons (TypeEnv M.empty) constructors
+    foldr goCons (TypeEnv M.empty) constructors
   where
-    goCons :: TypeEnv -> Constructor -> TypeEnv
-    goCons (TypeEnv env) (Constructor cons params) =
+    goCons :: Constructor -> TypeEnv -> TypeEnv
+    goCons (Constructor cons params) (TypeEnv env) =
       TypeEnv $
-        M.insert cons (foldl goParam (TyBase name) params) env
-    goParam :: Type -> String -> Type
-    goParam t p = TyFn (TyBase p) t
+        M.insert cons (foldr goParam (TyBase name) params) env
+    goParam :: String -> Type -> Type
+    goParam p t = TyFn (TyBase p) t
 
 unfoldTyFn :: Type -> [Type]
 unfoldTyFn (TyFn t1 t2) = t1 : unfoldTyFn t2

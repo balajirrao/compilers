@@ -44,10 +44,10 @@ Definition : defn lcaseid LowercaseParams '=' '{' Add '}' { Defn $2 $3 $6 }
             | data ucaseid '=' '{' Constructors '}' { Data $2 $5 }
 
 LowercaseParams : {- empty -} { [] }
-                | LowercaseParams lcaseid { $2 : $1 }
+                | lcaseid LowercaseParams { $1 : $2 }
 
 UppercaseParams : {- empty -} { [] }
-                | UppercaseParams ucaseid { $2 : $1 }
+                | ucaseid UppercaseParams { $1 : $2 }
 
 Constructors : Constructors ',' Constructor { $3 : $1 }
             | Constructor { [ $1 ]}

@@ -32,8 +32,8 @@ unify l r@(TyVar _) = unify r l
 unify (TyFn a b) (TyFn c d) = unify b d >> unify a c
 unify (TyBase t1) (TyBase t2)
   | t1 == t2 = return ()
-  | otherwise = throw UnificationError
-unify _ _ = throw UnificationError
+  | otherwise = throw $ UnificationError ("different base types " ++ (show t1) ++ " and " ++ (show t2))
+unify t1 t2 = throw $ UnificationError ("can't unify " ++ (show t1) ++ " " ++ (show t2))
 
 bind :: Member (State Bindings) r => TypeVar -> Type -> Sem r ()
 bind tv (TyVar tv') | tv == tv' = return ()

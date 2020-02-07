@@ -4,7 +4,6 @@ import AST
 import Control.Monad (foldM, forM_, replicateM, unless)
 import Data.Char
 import Data.Functor.Foldable
-import Data.List (unfoldr)
 import qualified Data.Map as M
 import Numeric
 import Polysemy

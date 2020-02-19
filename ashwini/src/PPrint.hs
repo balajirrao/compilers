@@ -5,17 +5,23 @@ module PPrint where
 
 import Data.Functor.Foldable
 
+import qualified Data.Map as M
 import qualified Data.List.NonEmpty as NE
 
 import Data.Text.Lazy hiding (foldr, map)
 import Data.Int
 
-import Control.Monad(forM_, foldM)
+import Control.Monad(forM_, foldM, forM)
 
 import Polysemy
 import Polysemy.Reader
+import Polysemy.State
 
 import AST
+import Type
+import Unify
+import TypeCheck
+
 import Prelude hiding (replicate, print, unlines, lines, concat)
 
 printIndent :: Int -> Text
@@ -63,3 +69,29 @@ pprintSem = fold pprint'
 
 pprint :: Fix AST -> Text
 pprint x = unlines $ NE.toList $ run $ runReader 0 (pprintSem x)
+
+pprintType :: Member (Reader Bindings) r => Type -> Sem r Text
+pprintType (TyVar x@(TypeVar tv)) = do
+    bindings <- ask
+    case (M.lookup x bindings) of
+        Just t -> pprintType t
+        Nothing -> pure $ pack tv
+pprintType (TyBase t) = pure $ pack t
+pprintType (TyFn t1 t2) = do
+    left <- pprintType t1
+    right <- pprintType t2
+    pure $ case t2 of
+        (TyFn _ _) -> left <> " -> (" <> right <> ")"
+        _ -> left <> " -> " <> right
+
+pprintDefinition ::  Member (Reader Int) r => Definition -> Sem r [Text]
+pprintDefinition (Defn name params body) =
+    (NE.toList <$>) <$> concat' $ (print .pack $ name) NE.:|
+        [ print $ (intercalate " " (pack <$> params)), indent $ pprintSem body ]
+pprintDefinition  (Data _ _) = return []
+
+pprintTypeEnv :: Member (Reader Bindings) r => TypeEnv -> Sem r [Text]
+pprintTypeEnv (TypeEnv tEnv) = printMapping <$> forM tEnv pprintType
+    where
+        printMapping :: M.Map String Text -> [Text]
+        printMapping = M.foldrWithKey (\n t x -> (pack n <> ": " <> t) : x) []

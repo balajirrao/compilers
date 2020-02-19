@@ -17,7 +17,6 @@ import Prelude hiding (lookup)
 import Errors
 
 -- Map from symbols to types
-newtype TypeEnv = TypeEnv (M.Map String Type)
 
 lookup :: Members [Error CompilerError, Reader TypeEnv] r => String -> Sem r Type
 lookup x = do
@@ -103,7 +102,7 @@ match (PatternCons constr params) t = do
         )
     processParam _ _ = throw $ TypeCheckError "processParam error: not a function type"
 
-typecheck ::
+typecheckAST ::
   Members
     [ Error CompilerError,
       Reader TypeEnv,
@@ -113,7 +112,7 @@ typecheck ::
     r =>
   Fix AST ->
   Sem r Type
-typecheck = fold typecheckSem
+typecheckAST = fold typecheckSem
 
 typecheckDefinitionPass1 ::
   Member (State NextTypeId) r =>
@@ -158,7 +157,7 @@ typecheckDefinitionPass2 (Defn name params ast) = do
   unless (length paramTypes == length params) $ throw $ TypeCheckError ("paramtypes length mismatch"  ++ show defnType)
   let paramsTypes = zip params paramTypes
       envWithParams = TypeEnv $ foldr (\(p, t) -> M.insert p t) env paramsTypes
-  body_type <- local (const envWithParams) $ typecheck ast
+  body_type <- local (const envWithParams) $ typecheckAST ast
   unify retType body_type
 typecheckDefinitionPass2 (Data _ _) = return ()
 
@@ -173,7 +172,7 @@ typecheckProgram ::
     ]
     r =>
   [Definition] ->
-  Sem r ()
+  Sem r (TypeEnv)
 typecheckProgram definitions = do
   let intType = TyBase "Int"
       binOpType = TyFn intType (TyFn intType intType)
@@ -192,6 +191,11 @@ typecheckProgram definitions = do
       definitions
 
   runReader env $ forM_ definitions typecheckDefinitionPass2
+  return env
 
-typecheckProg :: [Definition] -> (Either CompilerError (NextTypeId, (M.Map TypeVar Type, ())))
-typecheckProg = run . runError . runState (NextTypeId 0) . runState (M.empty) . typecheckProgram
+typecheckProg :: [Definition] -> (Bindings, TypeEnv)
+typecheckProg defs = run $ do
+  x <- runError . runState (NextTypeId 0) . runState (M.empty) . typecheckProgram $ defs
+  case x of
+    Left (e :: CompilerError) -> error $ show e
+    Right (_, t) -> return t

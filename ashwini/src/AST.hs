@@ -36,5 +36,3 @@ type Op = String
 data Constructor = Constructor String [String] deriving (Show)
 
 data Definition = Defn String [String] (Fix AST) | Data String [Constructor] deriving (Show)
-
-
